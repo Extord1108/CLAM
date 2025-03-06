@@ -54,7 +54,7 @@ parser.add_argument('--data_slide_dir', type=str, default=None)
 parser.add_argument('--slide_ext', type=str, default= '.svs')
 parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--feat_dir', type=str, default=None)
-parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1'])
+parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1', 'uni_v2', 'conch_v1_5'])
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--target_patch_size', type=int, default=224)
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 	for bag_candidate_idx in tqdm(range(total)):
 		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
 		bag_name = slide_id+'.h5'
-		h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
+		h5_file_path = os.path.join(args.data_h5_dir, 'filtered_patches', bag_name)
 		slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
 		print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
 		print(slide_id)

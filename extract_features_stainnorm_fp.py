@@ -1,5 +1,6 @@
 import time
 import os
+import sys
 import argparse
 import pdb
 from functools import partial
@@ -82,7 +83,7 @@ class Whole_Slide_Bag_FP_StainNorm(Whole_Slide_Bag_FP):
 			])
 			img = T_norm(img)
 			img, H, E = self.normalizer.normalize(I=img, stains=True)
-			img = img.permute(2, 1, 0)
+			img = img.permute(2, 0, 1)
 			img = T_reverse(img)
 		except:
 			img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
