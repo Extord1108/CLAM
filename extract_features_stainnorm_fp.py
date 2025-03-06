@@ -4,6 +4,8 @@ import argparse
 import pdb
 from functools import partial
 
+os.environ['CUDA_VISIBLE_DEVICES'] = "1"
+
 import torch
 import torch.nn as nn
 import timm
@@ -24,7 +26,6 @@ from models import get_encoder
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-os.environ['CUDA_VISIBLE_DEVICES'] = "4"
 os.environ["CONCH_CKPT_PATH"] = "/nfs/data371/gyf/checkpoints/conch/pytorch_model.bin"
 os.environ["UNI_CKPT_PATH"] = "/nfs/data371/gyf/checkpoints/uni/pytorch_model.bin"
 
@@ -69,20 +70,22 @@ class Whole_Slide_Bag_FP_StainNorm(Whole_Slide_Bag_FP):
 		with h5py.File(self.file_path,'r') as hdf5_file:
 			coord = hdf5_file['coords'][idx]
 		img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
+		try:
+			T_norm = transforms.Compose([
+				transforms.ToTensor(),
+				transforms.Lambda(lambda x: x*255)
+			])
 
-		T_norm = transforms.Compose([
-			transforms.ToTensor(),
-			transforms.Lambda(lambda x: x*255)
-		])
-
-		T_reverse = transforms.Compose([
-			transforms.Lambda(lambda x: x/255),
-			transforms.ToPILImage()
-		])
-		img = T_norm(img)
-		img, H, E = self.normalizer.normalize(I=img, stains=True)
-		img = img.permute(2, 1, 0)
-		img = T_reverse(img)
+			T_reverse = transforms.Compose([
+				transforms.Lambda(lambda x: x/255),
+				transforms.ToPILImage()
+			])
+			img = T_norm(img)
+			img, H, E = self.normalizer.normalize(I=img, stains=True)
+			img = img.permute(2, 1, 0)
+			img = T_reverse(img)
+		except:
+			img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
 		img = self.roi_transforms(img)
 
 		return {'img': img, 'coord': coord}
@@ -135,8 +138,8 @@ parser.add_argument('--norm_target_dir', type=str, default=None)
 parser.add_argument('--slide_ext', type=str, default= '.svs')
 parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--feat_dir', type=str, default=None)
-parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1'])
-parser.add_argument('--batch_size', type=int, default=16)
+parser.add_argument('--model_name', type=str, default='resnet50_trunc', choices=['resnet50_trunc', 'uni_v1', 'conch_v1', 'uni_v2', 'conch_v1_5'])
+parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--target_patch_size', type=int, default=224)
 args = parser.parse_args()
@@ -163,7 +166,7 @@ if __name__ == '__main__':
 	model = model.to(device)
 	total = len(bags_dataset)
 
-	loader_kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
+	loader_kwargs = {'num_workers': 8, 'pin_memory': True} if device.type == "cuda" else {}
 
 	for bag_candidate_idx in tqdm(range(total)):
 		slide_id = bags_dataset[bag_candidate_idx].split(args.slide_ext)[0]
